@@ -1,4 +1,5 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
+import { readRequiredEnv } from "@/utils/env";
 
 interface FirebaseClientConfig {
   apiKey: string;
@@ -7,15 +8,6 @@ interface FirebaseClientConfig {
   storageBucket: string;
   messagingSenderId: string;
   appId: string;
-}
-
-function readRequiredEnv(name: keyof NodeJS.ProcessEnv): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
 }
 
 export function getFirebaseClientConfig(): FirebaseClientConfig {

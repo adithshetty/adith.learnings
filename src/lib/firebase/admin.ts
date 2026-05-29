@@ -2,15 +2,7 @@ import "server-only";
 import { App, cert, getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
-
-function readRequiredEnv(name: keyof NodeJS.ProcessEnv): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-}
+import { readRequiredEnv } from "@/utils/env";
 
 function getPrivateKey(): string {
   return readRequiredEnv("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n");
