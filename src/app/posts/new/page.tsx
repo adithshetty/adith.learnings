@@ -80,9 +80,14 @@ export default function NewPostPage() {
     setSubmitting(true);
 
     try {
+      const idToken = await user.getIdToken();
+
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({ title, category, excerpt, content }),
       });
 
