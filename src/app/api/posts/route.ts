@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllPosts, createPost, CATEGORIES, type Category } from "@/lib/posts";
+import { AuthError, requireOwnerFromAuthHeader } from "@/lib/auth/ownerAuth";
 
 export async function GET() {
   const posts = getAllPosts();
@@ -8,6 +9,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireOwnerFromAuthHeader(request.headers.get("authorization"));
+
     const body = await request.json();
     const { title, category, excerpt, content } = body;
 
@@ -32,7 +35,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ slug }, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
   }
 }
