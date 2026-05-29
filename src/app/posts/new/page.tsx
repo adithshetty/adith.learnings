@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import Link from "next/link";
+import {
+  GoogleAuthProvider,
+  getAuth,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  type User,
+} from "firebase/auth";
+import { getFirebaseClientApp } from "@/lib/firebase/client";
 
 export default function NewPostPage() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>("general");
   const [excerpt, setExcerpt] = useState("");
@@ -14,9 +26,57 @@ export default function NewPostPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const app = getFirebaseClientApp();
+    const auth = getAuth(app);
+
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  async function handleGoogleSignIn() {
+    setError("");
+    setAuthBusy(true);
+
+    try {
+      const app = getFirebaseClientApp();
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch {
+      setError("Google sign-in failed. Please try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setError("");
+    setAuthBusy(true);
+
+    try {
+      const app = getFirebaseClientApp();
+      await signOut(getAuth(app));
+    } catch {
+      setError("Sign-out failed. Please try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!user) {
+      setError("Sign in with Google before creating an entry.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -51,6 +111,35 @@ export default function NewPostPage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-zinc-900 mb-8">New Learning Entry</h1>
+
+      <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <p className="text-sm text-zinc-700 mb-3">
+          {authLoading
+            ? "Checking sign-in status..."
+            : user
+              ? `Signed in as ${user.email}`
+              : "Sign in with Google to create entries."}
+        </p>
+        {user ? (
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={authBusy}
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-500 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {authBusy ? "Signing out..." : "Sign out"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={authBusy || authLoading}
+            className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {authBusy ? "Signing in..." : "Sign in with Google"}
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         {/* Title */}
@@ -144,7 +233,7 @@ export default function NewPostPage() {
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !user}
             className="rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? "Saving…" : "Save Entry"}
